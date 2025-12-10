@@ -137,11 +137,12 @@ Content-Type: application/json
   "supabaseUrl": "https://xxx.supabase.co",
   "supabaseAnonKey": "eyJ...",
   "supabaseServiceRoleKey": "eyJ...",
-  "supabaseJwtSecret": "your-jwt-secret",
   "adminEmails": ["admin@example.com"],
   "serverUrl": "https://crm.example.com"
 }
 ```
+
+> **Note:** The JWKS URL for JWT verification is automatically derived from `supabaseUrl` as `{supabaseUrl}/auth/v1/.well-known/jwks.json`. You can override this by providing `supabaseJwksUrl` explicitly.
 
 Response:
 ```json
@@ -303,6 +304,7 @@ Headers: x-saas-admin-key: <secret>
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anonymous key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
+| `SUPABASE_JWKS_URL` | JWKS endpoint for JWT verification (auto-derived from SUPABASE_URL) |
 | `SAAS_ADMIN_KEY` | Master API key for SaaS operations |
 | `WEBHOOK_SECRET` | Shared secret for webhook signature verification |
 | `ADMIN_EMAILS` | Comma-separated list of admin email addresses |

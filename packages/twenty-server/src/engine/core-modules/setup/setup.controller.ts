@@ -21,6 +21,7 @@ import * as path from 'path';
  * - Requires SETUP_KEY environment variable to be set
  * - Can only be used once (writes a lock file)
  * - Should be disabled in production after setup
+ * - Uses JWKS (JSON Web Key Set) for JWT verification (more secure than shared secret)
  *
  * Usage:
  *   POST /setup/initialize
@@ -28,8 +29,12 @@ import * as path from 'path';
  *     "setupKey": "your-setup-key",
  *     "supabaseUrl": "https://xxx.supabase.co",
  *     "supabaseAnonKey": "...",
- *     ...
+ *     "supabaseServiceRoleKey": "...",
+ *     "adminEmails": ["admin@example.com"],
+ *     "serverUrl": "https://crm.example.com"
  *   }
+ *
+ * Note: JWKS URL is automatically derived as {supabaseUrl}/auth/v1/.well-known/jwks.json
  */
 
 interface SetupRequest {
@@ -37,7 +42,7 @@ interface SetupRequest {
   supabaseUrl: string;
   supabaseAnonKey: string;
   supabaseServiceRoleKey: string;
-  supabaseJwtSecret: string;
+  supabaseJwksUrl?: string;  // Modern: JWKS endpoint for JWT verification
   adminEmails?: string[];
   serverUrl?: string;
   webhookSecret?: string;
@@ -122,13 +127,15 @@ export class SetupController {
     }
 
     // Validate required fields
-    if (!body.supabaseUrl || !body.supabaseAnonKey ||
-        !body.supabaseServiceRoleKey || !body.supabaseJwtSecret) {
+    if (!body.supabaseUrl || !body.supabaseAnonKey || !body.supabaseServiceRoleKey) {
       throw new HttpException(
-        'Missing required Supabase configuration',
+        'Missing required Supabase configuration (supabaseUrl, supabaseAnonKey, supabaseServiceRoleKey)',
         HttpStatus.BAD_REQUEST,
       );
     }
+
+    // Derive JWKS URL from Supabase URL if not provided
+    const supabaseJwksUrl = body.supabaseJwksUrl || `${body.supabaseUrl}/auth/v1/.well-known/jwks.json`;
 
     // Generate secrets if not provided
     const saasAdminKey = body.saasAdminKey || this.generateSecret();
@@ -141,7 +148,7 @@ export class SetupController {
       SUPABASE_URL: body.supabaseUrl,
       SUPABASE_ANON_KEY: body.supabaseAnonKey,
       SUPABASE_SERVICE_ROLE_KEY: body.supabaseServiceRoleKey,
-      SUPABASE_JWT_SECRET: body.supabaseJwtSecret,
+      SUPABASE_JWKS_URL: supabaseJwksUrl,  // JWKS endpoint for JWT verification
 
       // Admin
       ADMIN_EMAILS: body.adminEmails?.join(',') || '',

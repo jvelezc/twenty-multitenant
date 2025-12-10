@@ -12,18 +12,20 @@ I need to build a C# installer/provisioner for SleepNest CRM that deploys and co
 
 ## 1. Configuration (appsettings.json)
 
-All input configuration comes from the client application's appsettings.json:
+All input configuration comes from the client application's appsettings.json.
+
+> **⚠️ IMPORTANT: The JSON below contains EXAMPLE/PLACEHOLDER values. You MUST replace them with real values from your DigitalOcean and Supabase accounts before use.**
 
 ```json
 {
   "CrmInstaller": {
     "DigitalOcean": {
-      "ApiToken": "dop_v1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "ApiToken": "<REPLACE: Your DO API token from cloud.digitalocean.com/account/api/tokens>",
       "Region": "nyc1",
       "DropletSize": "s-2vcpu-4gb",
       "DropletImage": "docker-20-04",
-      "SshKeyIds": ["12345678"],
-      "RegistryName": "sleepnest"
+      "SshKeyIds": ["<REPLACE: Your SSH key ID from DO>"],
+      "RegistryName": "<REPLACE: Your registry name, e.g., 'sleepnest'>"
     },
     "Docker": {
       "Registry": "registry.digitalocean.com/sleepnest/sleepnest-crm",
@@ -31,33 +33,42 @@ All input configuration comes from the client application's appsettings.json:
       "InstallPath": "/opt/sleepnest-crm"
     },
     "Supabase": {
-      "ProjectRef": "abcdefghijklmnop",
-      "AccessToken": "sbp_1234567890abcdef",
-      "Url": "https://abcdefghijklmnop.supabase.co",
-      "AnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxOTAwMDAwMDAwfQ.xxxxx",
-      "ServiceRoleKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjAwMDAwMDAwLCJleHAiOjE5MDAwMDAwMDB9.xxxxx",
-      "JwtSecret": "your-supabase-jwt-secret-from-dashboard"
+      "ProjectRef": "<REPLACE: Your project ref from Supabase URL>",
+      "AccessToken": "<REPLACE: Your personal access token starting with sbp_>",
+      "Url": "<REPLACE: https://YOUR-PROJECT-REF.supabase.co>",
+      "AnonKey": "<REPLACE: Your anon key from Supabase Settings > API>",
+      "ServiceRoleKey": "<REPLACE: Your service role key from Supabase Settings > API>"
     },
     "Crm": {
-      "ServerUrl": "https://crm.customer-domain.com",
-      "AdminEmails": ["admin@example.com", "support@example.com"]
+      "ServerUrl": "<REPLACE: https://your-crm-domain.com>",
+      "AdminEmails": ["<REPLACE: admin@yourdomain.com>"]
     }
   }
 }
 ```
 
-### Where to find DigitalOcean values:
-- **ApiToken**: Generate at https://cloud.digitalocean.com/account/api/tokens (starts with `dop_v1_`)
-- **Region**: Choose from: `nyc1`, `nyc3`, `sfo3`, `ams3`, `sgp1`, `lon1`, `fra1`, `tor1`, `blr1`
-- **DropletSize**: `s-1vcpu-2gb` (min), `s-2vcpu-4gb` (recommended), `s-4vcpu-8gb` (production)
-- **SshKeyIds**: Get from https://cloud.digitalocean.com/account/security (or API)
-- **RegistryName**: Your container registry name from https://cloud.digitalocean.com/registry
+### Configuration Values Reference
 
-### Where to find Supabase values:
-- **ProjectRef**: From your Supabase dashboard URL: `https://app.supabase.com/project/{ProjectRef}`
-- **AccessToken**: Generate at https://app.supabase.com/account/tokens (starts with `sbp_`)
-- **Url, AnonKey, ServiceRoleKey**: Settings > API in Supabase dashboard
-- **JwtSecret**: Settings > API > JWT Settings > JWT Secret
+| Field | Example Value | Where to Get | Required |
+|-------|---------------|--------------|----------|
+| **DigitalOcean.ApiToken** | `dop_v1_abc123...` | [DO API Tokens](https://cloud.digitalocean.com/account/api/tokens) | ✅ YES |
+| **DigitalOcean.Region** | `nyc1` | Choose: `nyc1`, `nyc3`, `sfo3`, `ams3`, `sgp1`, `lon1`, `fra1` | ✅ YES |
+| **DigitalOcean.DropletSize** | `s-2vcpu-4gb` | `s-1vcpu-2gb` (min), `s-2vcpu-4gb` (recommended) | ✅ YES |
+| **DigitalOcean.DropletImage** | `docker-20-04` | Use this exact value (Docker pre-installed) | ✅ YES |
+| **DigitalOcean.SshKeyIds** | `["12345678"]` | [DO Security](https://cloud.digitalocean.com/account/security) | ✅ YES |
+| **DigitalOcean.RegistryName** | `sleepnest` | [DO Registry](https://cloud.digitalocean.com/registry) | ✅ YES |
+| **Docker.Registry** | `registry.digitalocean.com/sleepnest/sleepnest-crm` | Fixed value | ✅ YES |
+| **Docker.Tag** | `latest` | Or specific version like `v1.0.0` | ✅ YES |
+| **Docker.InstallPath** | `/opt/sleepnest-crm` | Default is fine | ✅ YES |
+| **Supabase.ProjectRef** | `abcdefghijklmnop` | From URL: `app.supabase.com/project/{THIS}` | ✅ YES |
+| **Supabase.AccessToken** | `sbp_abc123...` | [Supabase Tokens](https://app.supabase.com/account/tokens) | ✅ YES |
+| **Supabase.Url** | `https://abcdefghijklmnop.supabase.co` | Supabase Dashboard > Settings > API | ✅ YES |
+| **Supabase.AnonKey** | `eyJhbGciOi...` (JWT) | Supabase Dashboard > Settings > API | ✅ YES |
+| **Supabase.ServiceRoleKey** | `eyJhbGciOi...` (JWT) | Supabase Dashboard > Settings > API | ✅ YES |
+| **Crm.ServerUrl** | `https://crm.example.com` | Your CRM's public URL | ✅ YES |
+| **Crm.AdminEmails** | `["admin@example.com"]` | Platform admin email addresses | ✅ YES |
+
+> **Note:** JWT verification uses JWKS (JSON Web Key Set) which is automatically derived from the Supabase URL as `{Url}/auth/v1/.well-known/jwks.json`. No JWT secret is needed.
 
 ## 2. C# Configuration Classes
 
@@ -99,7 +110,9 @@ public class SupabaseSettings
     public string Url { get; set; } = string.Empty;
     public string AnonKey { get; set; } = string.Empty;
     public string ServiceRoleKey { get; set; } = string.Empty;
-    public string JwtSecret { get; set; } = string.Empty;
+
+    // JWKS URL is auto-derived from Url: {Url}/auth/v1/.well-known/jwks.json
+    public string JwksUrl => $"{Url}/auth/v1/.well-known/jwks.json";
 }
 
 public class CrmSettings
@@ -321,10 +334,12 @@ Content-Type: application/json
   "supabaseUrl": "https://xxx.supabase.co",
   "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "supabaseServiceRoleKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "supabaseJwtSecret": "your-supabase-jwt-secret",
   "adminEmails": ["admin@example.com"],
   "serverUrl": "https://crm.customer-domain.com"
 }
+
+Note: JWKS URL for JWT verification is automatically derived as:
+{supabaseUrl}/auth/v1/.well-known/jwks.json
 
 Success Response (200):
 {
