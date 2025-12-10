@@ -39,11 +39,14 @@ ARG REACT_APP_SERVER_BASE_URL
 
 # Set CI=true to prevent browser opening and other interactive behaviors
 ENV CI=true
+# Increase Node memory limit for large builds
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 COPY ./packages/twenty-front /app/packages/twenty-front
 COPY ./packages/twenty-ui /app/packages/twenty-ui
 COPY ./packages/twenty-shared /app/packages/twenty-shared
-RUN npx nx build twenty-front
+COPY ./packages/twenty-emails /app/packages/twenty-emails
+RUN npx nx build twenty-front --verbose || (echo "Build failed. Check logs above." && exit 1)
 
 
 # Final stage: Run the application
