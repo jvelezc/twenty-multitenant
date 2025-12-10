@@ -484,9 +484,10 @@ Go to your repository **Settings > Secrets and variables > Actions** and add:
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
-| `DIGITALOCEAN_EMAIL` | Your DigitalOcean registered email | `jose@gentlebirth.com` |
 | `DIGITALOCEAN_ACCESS_TOKEN` | Your DigitalOcean API token | `dop_v1_xxx...` |
-| `DIGITALOCEAN_REGISTRY_NAME` | Your registry name (without full URL) | `sleepnest` |
+| `DIGITALOCEAN_REGISTRY` | Your registry name (without full URL) | `sleepnest` |
+| `REGISTRY_USERNAME` | Registry login username (your DO email) | `jose@gentlebirth.com` |
+| `REGISTRY_PASSWORD` | Registry login password (your DO API token) | `dop_v1_xxx...` |
 
 ### Trigger Deployment
 
