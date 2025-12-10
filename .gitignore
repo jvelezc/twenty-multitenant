@@ -3,6 +3,7 @@
 .env.local
 .env.secrets
 .DS_Store
+.local/
 /.idea
 **/**/node_modules/
 .cache

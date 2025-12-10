@@ -3,8 +3,7 @@ import styled from '@emotion/styled';
 import { t } from '@lingui/core/macro';
 import {
     IconBuildingSkyscraper,
-    IconUserOff,
-    IconUsers,
+    IconUsers
 } from 'twenty-ui/display';
 import { Card } from 'twenty-ui/layout';
 
@@ -79,7 +78,7 @@ export const SettingsAdminTenantStatsCards = ({
       color: 'green',
     },
     {
-      Icon: IconUserOff,
+      Icon: IconForbid,
       value: stats?.disabledTenants ?? 0,
       label: t`Disabled Tenants`,
       color: 'red',
