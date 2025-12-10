@@ -8,11 +8,12 @@ import type {
     TenantSummary,
 } from '@/settings/admin-panel/tenants/types/Tenant';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { TextInput } from '@/ui/input/components/TextInput';
 import styled from '@emotion/styled';
 import { t } from '@lingui/core/macro';
 import { useCallback, useEffect, useState } from 'react';
 import { H2Title, IconFilter, IconRefresh, IconSearch } from 'twenty-ui/display';
-import { Button, TextInput, Toggle } from 'twenty-ui/input';
+import { Button, Toggle } from 'twenty-ui/input';
 import { Section } from 'twenty-ui/layout';
 
 const StyledSearchContainer = styled.div`
