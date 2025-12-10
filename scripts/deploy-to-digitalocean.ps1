@@ -84,7 +84,7 @@ try {
     if (-not $VcsRef) { $VcsRef = "unknown" }
 
     docker build `
-        -f packages/twenty-docker/Dockerfile `
+        -f packages/twenty-docker/twenty/Dockerfile `
         -t $FullImageName `
         --build-arg BUILD_DATE="$BuildDate" `
         --build-arg VCS_REF="$VcsRef" `
