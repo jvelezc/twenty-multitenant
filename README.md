@@ -22,11 +22,77 @@
 
 <br />
 
-# Installation
+# SleepNest CRM (Multi-tenant Fork)
 
-See:
-🚀 [Self-hosting](https://docs.twenty.com/developers/self-hosting/docker-compose)
-🖥️ [Local Setup](https://docs.twenty.com/developers/local-setup)
+This is a multi-tenant fork of Twenty CRM with Supabase authentication support. The Docker image is published to DigitalOcean Container Registry as `sleepnest-crm`.
+
+## Quick Links
+
+- 📋 [Multi-tenancy Plan](./MULTITENANCY_PLAN.md) - Full implementation details
+- 🚀 [Self-hosting](https://docs.twenty.com/developers/self-hosting/docker-compose)
+- 🖥️ [Local Setup](https://docs.twenty.com/developers/local-setup)
+
+---
+
+# Deployment to DigitalOcean Container Registry
+
+## Prerequisites
+
+1. **Install Docker** - [Get Docker](https://docs.docker.com/get-docker/)
+2. **Install doctl CLI** - [Install doctl](https://docs.digitalocean.com/reference/doctl/how-to/install/)
+3. **Create a DigitalOcean Container Registry** - [Create Registry](https://cloud.digitalocean.com/registry)
+4. **Generate a DigitalOcean API Token** - [API Tokens](https://cloud.digitalocean.com/account/api/tokens)
+
+## Setup (One-time)
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.deploy.example .env.deploy
+   ```
+
+2. Edit `.env.deploy` with your values:
+   ```env
+   DIGITALOCEAN_ACCESS_TOKEN=dop_v1_your_token_here
+   DIGITALOCEAN_REGISTRY=registry.digitalocean.com/your-registry-name
+   DOCKER_IMAGE_NAME=sleepnest-crm
+   DOCKER_IMAGE_TAG=latest
+   ```
+
+> ⚠️ **Important**: Never commit `.env.deploy` to source control. It's already in `.gitignore`.
+
+## Deploy
+
+### Windows (PowerShell)
+```powershell
+.\scripts\deploy-to-digitalocean.ps1
+
+# With a specific version tag:
+.\scripts\deploy-to-digitalocean.ps1 -Tag "v1.0.0"
+```
+
+### Linux/Mac (Bash)
+```bash
+chmod +x scripts/deploy-to-digitalocean.sh
+./scripts/deploy-to-digitalocean.sh
+
+# With a specific version tag:
+./scripts/deploy-to-digitalocean.sh v1.0.0
+```
+
+## Customer Usage
+
+After deployment, customers can pull and run the image:
+
+```bash
+# Pull the image
+docker pull registry.digitalocean.com/your-registry/sleepnest-crm:latest
+
+# Run with docker-compose (see packages/twenty-docker/docker-compose.yml)
+```
+
+---
+
+# Local Development
 
 # Does the world need another CRM?
 

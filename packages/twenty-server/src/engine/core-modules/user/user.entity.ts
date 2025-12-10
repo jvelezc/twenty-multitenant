@@ -3,17 +3,17 @@ import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { IDField } from '@ptc-org/nestjs-query-graphql';
 import { APP_LOCALES, SOURCE_LOCALE } from 'twenty-shared/translations';
 import {
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
-  CreateDateColumn,
-  DeleteDateColumn,
-  Entity,
-  Index,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  Relation,
-  UpdateDateColumn,
+    BeforeInsert,
+    BeforeUpdate,
+    Column,
+    CreateDateColumn,
+    DeleteDateColumn,
+    Entity,
+    Index,
+    OneToMany,
+    PrimaryGeneratedColumn,
+    Relation,
+    UpdateDateColumn,
 } from 'typeorm';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
@@ -22,11 +22,17 @@ import { KeyValuePairEntity } from 'src/engine/core-modules/key-value-pair/key-v
 import { OnboardingStatus } from 'src/engine/core-modules/onboarding/enums/onboarding-status.enum';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { WorkspaceMemberDTO } from 'src/engine/core-modules/user/dtos/workspace-member.dto';
+import { PrimaryAuthProvider } from 'src/engine/core-modules/user/enums/primary-auth-provider.enum';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 
 registerEnumType(OnboardingStatus, {
   name: 'OnboardingStatus',
   description: 'Onboarding status',
+});
+
+registerEnumType(PrimaryAuthProvider, {
+  name: 'PrimaryAuthProvider',
+  description: 'Primary authentication provider for the user',
 });
 
 @Entity({ name: 'user', schema: 'core' })
@@ -97,6 +103,19 @@ export class UserEntity {
   @Field(() => String, { nullable: false })
   @Column({ nullable: false, default: SOURCE_LOCALE, type: 'varchar' })
   locale: keyof typeof APP_LOCALES;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true, unique: true })
+  supabaseUserId?: string;
+
+  @Field(() => PrimaryAuthProvider)
+  @Column({
+    type: 'enum',
+    enumName: 'user_primaryauthprovider_enum',
+    enum: PrimaryAuthProvider,
+    default: PrimaryAuthProvider.PASSWORD,
+  })
+  primaryAuthProvider: PrimaryAuthProvider;
 
   @OneToMany(() => AppTokenEntity, (appToken) => appToken.user, {
     cascade: true,

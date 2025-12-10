@@ -2,12 +2,12 @@ import { type LogLevel, Logger } from '@nestjs/common';
 
 import { plainToClass } from 'class-transformer';
 import {
-  IsDefined,
-  IsOptional,
-  IsUrl,
-  ValidateIf,
-  type ValidationError,
-  validateSync,
+    IsDefined,
+    IsOptional,
+    IsUrl,
+    ValidateIf,
+    type ValidationError,
+    validateSync,
 } from 'class-validator';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -35,8 +35,8 @@ import { IsTwentySemVer } from 'src/engine/core-modules/twenty-config/decorators
 import { ConfigVariableType } from 'src/engine/core-modules/twenty-config/enums/config-variable-type.enum';
 import { ConfigVariablesGroup } from 'src/engine/core-modules/twenty-config/enums/config-variables-group.enum';
 import {
-  ConfigVariableException,
-  ConfigVariableExceptionCode,
+    ConfigVariableException,
+    ConfigVariableExceptionCode,
 } from 'src/engine/core-modules/twenty-config/twenty-config.exception';
 
 export class ConfigVariables {
@@ -217,6 +217,55 @@ export class ConfigVariables {
     type: ConfigVariableType.BOOLEAN,
   })
   CALENDAR_PROVIDER_MICROSOFT_ENABLED = false;
+
+  // ==================== SUPABASE AUTH ====================
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    description: 'Enable or disable Supabase authentication',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  AUTH_SUPABASE_ENABLED = false;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: false,
+    description: 'Supabase project URL (e.g., https://xxx.supabase.co)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsUrl({ require_tld: false, require_protocol: true })
+  @ValidateIf((env) => env.AUTH_SUPABASE_ENABLED)
+  SUPABASE_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: false,
+    description: 'Supabase public anon key',
+    type: ConfigVariableType.STRING,
+  })
+  @ValidateIf((env) => env.AUTH_SUPABASE_ENABLED)
+  SUPABASE_ANON_KEY: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: true,
+    description: 'Supabase service role key (server-side only)',
+    type: ConfigVariableType.STRING,
+  })
+  @ValidateIf((env) => env.AUTH_SUPABASE_ENABLED)
+  SUPABASE_SERVICE_ROLE_KEY: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: true,
+    description: 'Supabase JWT secret for token validation',
+    type: ConfigVariableType.STRING,
+  })
+  @ValidateIf((env) => env.AUTH_SUPABASE_ENABLED)
+  SUPABASE_JWT_SECRET: string;
+
+  // ==================== END SUPABASE AUTH ====================
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.OTHER,

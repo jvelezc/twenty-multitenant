@@ -4,18 +4,18 @@ import { IDField } from '@ptc-org/nestjs-query-graphql';
 import { Application } from 'cloudflare/resources/zero-trust/access/applications/applications';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 import {
-  Check,
-  Column,
-  CreateDateColumn,
-  DeleteDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  Relation,
-  UpdateDateColumn,
+    Check,
+    Column,
+    CreateDateColumn,
+    DeleteDateColumn,
+    Entity,
+    Index,
+    JoinColumn,
+    ManyToOne,
+    OneToMany,
+    PrimaryGeneratedColumn,
+    Relation,
+    UpdateDateColumn,
 } from 'typeorm';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
@@ -34,9 +34,9 @@ import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user
 import { WebhookEntity } from 'src/engine/core-modules/webhook/webhook.entity';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import {
-  DEFAULT_FAST_MODEL,
-  DEFAULT_SMART_MODEL,
-  type ModelId,
+    DEFAULT_FAST_MODEL,
+    DEFAULT_SMART_MODEL,
+    type ModelId,
 } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-models.const';
 import { RoleDTO } from 'src/engine/metadata-modules/role/dtos/role.dto';
 import { ViewFieldDTO } from 'src/engine/metadata-modules/view-field/dtos/view-field.dto';
@@ -256,6 +256,10 @@ export class WorkspaceEntity {
   @Field()
   @Column({ default: false })
   isMicrosoftAuthBypassEnabled: boolean;
+
+  @Field()
+  @Column({ default: false })
+  isSupabaseAuthEnabled: boolean;
 
   @Field()
   @Column({ default: false })

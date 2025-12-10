@@ -1,4 +1,7 @@
 **/**/.env
+.env.deploy
+.env.local
+.env.secrets
 .DS_Store
 /.idea
 **/**/node_modules/

@@ -69,7 +69,9 @@ import { TwoFactorAuthenticationModule } from '../two-factor-authentication/two-
 
 import { AuthResolver } from './auth.resolver';
 
+import { SupabaseAuthController } from './controllers/supabase-auth.controller';
 import { AuthService } from './services/auth.service';
+import { SupabaseAuthService } from './services/supabase-auth.service';
 import { JwtAuthStrategy } from './strategies/jwt.auth.strategy';
 
 @Module({
@@ -123,6 +125,7 @@ import { JwtAuthStrategy } from './strategies/jwt.auth.strategy';
     GoogleAPIsAuthController,
     MicrosoftAPIsAuthController,
     SSOAuthController,
+    SupabaseAuthController,
   ],
   providers: [
     SignInUpService,
@@ -149,6 +152,7 @@ import { JwtAuthStrategy } from './strategies/jwt.auth.strategy';
     UpdateConnectedAccountOnReconnectService,
     TransientTokenService,
     AuthSsoService,
+    SupabaseAuthService,
   ],
   exports: [
     AccessTokenService,
