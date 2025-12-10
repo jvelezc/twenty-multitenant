@@ -1,0 +1,23 @@
+# Supabase Edge Functions Configuration
+# =====================================
+#
+# This configures the Supabase Edge Functions for tenant management.
+# Deploy with: supabase functions deploy
+
+[project]
+id = "your-project-id"
+
+# Edge Function: tenant-create
+# Creates new tenants
+[functions.tenant-create]
+verify_jwt = false  # We use x-saas-admin-key instead
+
+# Edge Function: tenant-manage
+# Manages existing tenants (disable, enable, delete, update)
+[functions.tenant-manage]
+verify_jwt = false  # We use x-saas-admin-key instead
+
+# Edge Function: tenant-stats
+# Get platform statistics
+[functions.tenant-stats]
+verify_jwt = false  # We use x-saas-admin-key instead

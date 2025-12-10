@@ -1,8 +1,9 @@
 # Multi-Tenant Architecture Plan with Supabase Authentication
 
-## Implementation Status: ✅ PHASE 1 COMPLETE
+## Implementation Status: ✅ PHASE 1 & 2 COMPLETE
 
-The following backend components have been implemented:
+### Phase 1: Supabase Authentication
+
 - ✅ Supabase config variables added to `config-variables.ts`
 - ✅ Database migration for `supabaseUserId` and `primaryAuthProvider` columns
 - ✅ User entity updated with Supabase fields
@@ -12,6 +13,53 @@ The following backend components have been implemented:
 - ✅ Supabase auth controller (`supabase-auth.controller.ts`)
 - ✅ Auth module updated with Supabase integration
 - ✅ `@supabase/supabase-js` dependency added
+
+### Phase 2: Admin Tenant Management
+
+- ✅ Database migration for tenant admin fields (`isDisabled`, `adminNotes`, etc.)
+- ✅ **No subscription tiers** - everyone gets 100% of the product
+- ✅ **No user/storage limits** - unlimited by default (-1)
+- ✅ Workspace entity updated with admin fields
+- ✅ `TenantAdminService` for tenant management operations
+- ✅ `TenantAdminController` with REST endpoints
+- ✅ `AdminGuard` for protecting admin routes
+- ✅ Cross-tenant query capability for super admins
+
+**Multi-Tenancy Model:**
+- Each person who creates an account = 1 tenant (workspace)
+- Each tenant has their own isolated PostgreSQL schema
+- Everyone enjoys full access to all features
+
+### Admin User Identification (Supabase Integration)
+
+Admin users are identified through **Supabase app_metadata** (server-side only, cannot be modified by users):
+
+**Option 1: Supabase app_metadata (recommended)**
+```sql
+-- In Supabase SQL Editor, set a user as admin:
+UPDATE auth.users
+SET raw_app_meta_data = raw_app_meta_data || '{"role": "admin"}'::jsonb
+WHERE email = 'admin@example.com';
+
+-- For super admin with impersonation:
+UPDATE auth.users
+SET raw_app_meta_data = raw_app_meta_data || '{"role": "super_admin", "can_impersonate": true}'::jsonb
+WHERE email = 'superadmin@example.com';
+```
+
+**Option 2: Environment variable (simple)**
+```env
+ADMIN_EMAILS=admin@example.com,jose@gentlebirth.com
+```
+
+**Recognized app_metadata fields:**
+- `role: 'admin' | 'super_admin' | 'platform_admin'` → Full admin panel access
+- `is_admin: true` → Full admin panel access
+- `can_impersonate: true` → Can impersonate users across workspaces
+
+**Twenty user flags synced from Supabase:**
+- `canAccessFullAdminPanel` → Access to `/admin/tenants` endpoints
+- `canImpersonate` → Can impersonate users in other workspaces
 
 ---
 

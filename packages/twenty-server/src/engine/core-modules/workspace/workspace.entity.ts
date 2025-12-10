@@ -3,19 +3,20 @@ import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { IDField } from '@ptc-org/nestjs-query-graphql';
 import { Application } from 'cloudflare/resources/zero-trust/access/applications/applications';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
+
 import {
-    Check,
-    Column,
-    CreateDateColumn,
-    DeleteDateColumn,
-    Entity,
-    Index,
-    JoinColumn,
-    ManyToOne,
-    OneToMany,
-    PrimaryGeneratedColumn,
-    Relation,
-    UpdateDateColumn,
+  Check,
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  Relation,
+  UpdateDateColumn,
 } from 'typeorm';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
@@ -34,9 +35,9 @@ import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user
 import { WebhookEntity } from 'src/engine/core-modules/webhook/webhook.entity';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import {
-    DEFAULT_FAST_MODEL,
-    DEFAULT_SMART_MODEL,
-    type ModelId,
+  DEFAULT_FAST_MODEL,
+  DEFAULT_SMART_MODEL,
+  type ModelId,
 } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-models.const';
 import { RoleDTO } from 'src/engine/metadata-modules/role/dtos/role.dto';
 import { ViewFieldDTO } from 'src/engine/metadata-modules/view-field/dtos/view-field.dto';
@@ -51,9 +52,15 @@ import { ViewSortDTO } from 'src/engine/metadata-modules/view-sort/dtos/view-sor
 import { ViewSortEntity } from 'src/engine/metadata-modules/view-sort/entities/view-sort.entity';
 import { ViewDTO } from 'src/engine/metadata-modules/view/dtos/view.dto';
 import { ViewEntity } from 'src/engine/metadata-modules/view/entities/view.entity';
+import { SubscriptionTier } from './enums/subscription-tier.enum';
 
 registerEnumType(WorkspaceActivationStatus, {
   name: 'WorkspaceActivationStatus',
+});
+
+registerEnumType(SubscriptionTier, {
+  name: 'SubscriptionTier',
+  description: 'Subscription tier for the workspace',
 });
 
 @Check(
@@ -315,4 +322,41 @@ export class WorkspaceEntity {
     onDelete: 'CASCADE',
   })
   applications: Relation<Application[]>;
+
+  // ==================== ADMIN/TENANT MANAGEMENT FIELDS ====================
+
+  @Field()
+  @Column({ default: false })
+  isDisabled: boolean;
+
+  @Field({ nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
+  disabledAt?: Date;
+
+  @Field({ nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  disabledReason?: string;
+
+  @Field(() => SubscriptionTier)
+  @Column({
+    type: 'enum',
+    enumName: 'workspace_subscriptiontier_enum',
+    enum: SubscriptionTier,
+    default: SubscriptionTier.FULL,
+  })
+  subscriptionTier: SubscriptionTier;
+
+  // No user limits - everyone gets full access
+  @Field(() => Int)
+  @Column({ default: -1 }) // -1 = unlimited
+  maxUsers: number;
+
+  // No storage limits - everyone gets full access
+  @Field(() => Int)
+  @Column({ default: -1 }) // -1 = unlimited
+  storageQuotaMb: number;
+
+  @Field({ nullable: true })
+  @Column({ type: 'text', nullable: true })
+  adminNotes?: string;
 }

@@ -70,7 +70,7 @@ cd "$ROOT_DIR"
 
 # Use the existing Dockerfile from twenty-docker package
 docker build \
-    -f packages/twenty-docker/Dockerfile \
+    -f packages/twenty-docker/twenty/Dockerfile \
     -t "$FULL_IMAGE_NAME" \
     --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
     --build-arg VCS_REF="$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')" \

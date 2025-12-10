@@ -37,6 +37,9 @@ FROM common-deps AS twenty-front-build
 
 ARG REACT_APP_SERVER_BASE_URL
 
+# Set CI=true to prevent browser opening and other interactive behaviors
+ENV CI=true
+
 COPY ./packages/twenty-front /app/packages/twenty-front
 COPY ./packages/twenty-ui /app/packages/twenty-ui
 COPY ./packages/twenty-shared /app/packages/twenty-shared

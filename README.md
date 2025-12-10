@@ -24,13 +24,261 @@
 
 # SleepNest CRM (Multi-tenant Fork)
 
-This is a multi-tenant fork of Twenty CRM with Supabase authentication support. The Docker image is published to DigitalOcean Container Registry as `sleepnest-crm`.
+This is a multi-tenant fork of Twenty CRM designed to operate as an **add-on module** within a larger SaaS platform. The CRM runs on DigitalOcean and integrates with Supabase as the control unit.
 
 ## Quick Links
 
 - 📋 [Multi-tenancy Plan](./MULTITENANCY_PLAN.md) - Full implementation details
-- 🚀 [Self-hosting](https://docs.twenty.com/developers/self-hosting/docker-compose)
-- 🖥️ [Local Setup](https://docs.twenty.com/developers/local-setup)
+- 📦 [Supabase Integration](./supabase/README.md) - Edge functions and schema
+- 🚀 [Customer Install](./customer-install/README.md) - Docker deployment guide
+
+---
+
+# Architecture Overview
+
+## System Design
+
+The CRM operates as part of a two-system architecture:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PARENT SAAS PLATFORM                                 │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                    Supabase (Control Unit)                           │    │
+│  │                                                                      │    │
+│  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐    │    │
+│  │  │  auth.users  │   │  crm schema  │   │   Edge Functions     │    │    │
+│  │  │              │   │              │   │                      │    │    │
+│  │  │  - User auth │   │  - tenants   │   │  - crm-proxy        │    │    │
+│  │  │  - SSO/OAuth │   │  - events    │   │  - crm-webhook      │    │    │
+│  │  │  - Sessions  │   │  - sync_queue│   │  - tenant-create    │    │    │
+│  │  └──────────────┘   └──────────────┘   └──────────────────────┘    │    │
+│  │                                                                      │    │
+│  │  Responsibilities:                                                   │    │
+│  │  • User authentication & authorization                               │    │
+│  │  • Tenant lifecycle management (source of truth)                     │    │
+│  │  • Billing decisions (handled by parent platform)                    │    │
+│  │  • API gateway via Edge Functions                                    │    │
+│  └──────────────────────────────────────────────────────────────────────┘    │
+│                                      │                                        │
+│                                      │ SAAS_ADMIN_KEY                        │
+│                                      │ (Secure API Communication)            │
+│                                      ▼                                        │
+│  ┌──────────────────────────────────────────────────────────────────────┐    │
+│  │                Twenty CRM (DigitalOcean Droplet)                      │    │
+│  │                                                                       │    │
+│  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐     │    │
+│  │  │   NestJS     │   │  PostgreSQL  │   │   Redis + BullMQ     │     │    │
+│  │  │   Server     │   │              │   │                      │     │    │
+│  │  │              │   │  - core.*    │   │  - Job queues        │     │    │
+│  │  │  - REST API  │   │  - workspace_│   │  - Background tasks  │     │    │
+│  │  │  - GraphQL   │   │    schemas   │   │  - Email sync        │     │    │
+│  │  └──────────────┘   └──────────────┘   └──────────────────────┘     │    │
+│  │                                                                       │    │
+│  │  Responsibilities:                                                    │    │
+│  │  • CRM data storage (contacts, companies, opportunities)             │    │
+│  │  • Multi-tenant workspace isolation                                   │    │
+│  │  • Business logic & workflows                                         │    │
+│  │  • Webhook notifications back to Supabase                            │    │
+│  └──────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Key Design Decisions
+
+### 1. Billing is NOT the CRM's Responsibility
+
+The CRM is an **add-on** to a larger platform. Billing, subscriptions, and payment processing are handled by the parent platform. The CRM simply:
+- Receives commands (create/disable/enable/delete tenant)
+- Executes them
+- Confirms via webhook
+
+### 2. Supabase as Control Unit
+
+Supabase owns:
+- **User authentication** (`auth.users`)
+- **Tenant lifecycle** (`crm.tenants` - source of truth)
+- **API gateway** (Edge Functions proxy requests to CRM)
+
+### 3. Shared Data Model (`crm` Schema)
+
+A dedicated `crm` schema in Supabase acts as the **contract** between systems:
+
+| Table | Purpose |
+|-------|---------|
+| `crm.tenants` | Master tenant list, links to CRM workspace |
+| `crm.tenant_users` | Maps Supabase users to tenants |
+| `crm.tenant_events` | Audit log of all lifecycle events |
+| `crm.sync_queue` | Queue for operations pending sync |
+
+### 4. Eventual Consistency via Webhooks
+
+PostgreSQL triggers in the CRM use `pg_net` to send HTTP webhooks to Supabase when data changes. This ensures both systems stay in sync even with network issues.
+
+```
+Supabase → Edge Function → CRM API → PostgreSQL
+                                         │
+                                         │ pg_net webhook
+                                         ▼
+Supabase ← crm-webhook ← HTTP POST ← trigger
+```
+
+### 5. Transparent API Proxy
+
+The `crm-proxy` Edge Function allows the client to call CRM APIs without knowing the `SAAS_ADMIN_KEY`. Same API shape in, same API shape out.
+
+```typescript
+// Client calls Supabase
+POST /functions/v1/crm-proxy/tenants
+
+// Edge Function adds auth and forwards to CRM
+POST https://crm.example.com/saas/tenants
+Headers: x-saas-admin-key: <secret>
+```
+
+---
+
+## Authentication & Authorization
+
+### Three Levels of Access
+
+| Level | Authentication | Use Case |
+|-------|----------------|----------|
+| **User** | Supabase JWT | Regular CRM users accessing their workspace |
+| **Admin** | JWT + `canAccessFullAdminPanel` | Platform admins managing tenants via UI |
+| **SaaS API** | `x-saas-admin-key` header | Automation, Edge Functions, system integration |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
+| `SAAS_ADMIN_KEY` | Master API key for SaaS operations |
+| `WEBHOOK_SECRET` | Shared secret for webhook signature verification |
+| `ADMIN_EMAILS` | Comma-separated list of admin email addresses |
+
+---
+
+## API Endpoints
+
+### SaaS Admin API (`/saas/*`)
+
+Protected by `x-saas-admin-key` header. Used by Edge Functions and automation.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/saas/tenants` | Create new tenant |
+| `GET` | `/saas/tenants` | List all tenants |
+| `GET` | `/saas/tenants/:id` | Get tenant details |
+| `POST` | `/saas/tenants/:id/disable` | Disable tenant |
+| `POST` | `/saas/tenants/:id/enable` | Enable tenant |
+| `DELETE` | `/saas/tenants/:id` | Delete tenant permanently |
+| `PATCH` | `/saas/tenants/:id/notes` | Update admin notes |
+| `GET` | `/saas/stats` | Platform statistics |
+
+### Admin API (`/admin/*`)
+
+Protected by JWT + Admin role. Used by the CRM admin UI.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/admin/tenants` | List tenants |
+| `GET` | `/admin/tenants/:id` | Get tenant details |
+| `POST` | `/admin/tenants/:id/disable` | Disable tenant |
+| `POST` | `/admin/tenants/:id/enable` | Enable tenant |
+| `PATCH` | `/admin/tenants/:id/notes` | Update notes |
+| `GET` | `/admin/tenants/stats` | Statistics |
+
+---
+
+## Supabase Edge Functions
+
+| Function | Auth | Description |
+|----------|------|-------------|
+| `crm-proxy` | Supabase JWT (admin) | Transparent proxy to CRM `/saas/*` API |
+| `crm-webhook` | Webhook signature | Receives confirmations from CRM |
+| `tenant-create` | `x-saas-admin-key` | Create tenant (legacy) |
+| `tenant-manage` | `x-saas-admin-key` | Manage tenants (legacy) |
+| `tenant-stats` | `x-saas-admin-key` | Get statistics (legacy) |
+
+---
+
+## Tenant Lifecycle
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   PENDING   │────▶│   ACTIVE    │────▶│  DISABLED   │────▶│   DELETED   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+      │                   │                   │
+      │                   │                   │
+      ▼                   ▼                   ▼
+  Created in          Normal use         Subscription
+  crm.tenants         of CRM             cancelled
+  waiting for                            or suspended
+  CRM workspace
+```
+
+### State Transitions
+
+| From | To | Trigger |
+|------|-----|---------|
+| - | `pending` | Tenant created in Supabase |
+| `pending` | `active` | CRM workspace created, webhook received |
+| `active` | `disabled` | Subscription cancelled, manual disable |
+| `disabled` | `active` | Subscription renewed, manual enable |
+| `active`/`disabled` | `deleted` | Account deletion requested |
+
+---
+
+## Admin UI
+
+The CRM includes a **Tenants** tab in the admin panel (Settings → Admin → Tenants):
+
+- **Platform Overview**: Stats cards showing total/active/disabled tenants
+- **Tenant List**: Searchable, filterable list with status badges
+- **Tenant Detail**: Full info, users, usage stats, admin notes
+- **Actions**: Enable/disable with reason, update notes
+
+Access requires `canAccessFullAdminPanel = true` on the user.
+
+---
+
+## Deployment
+
+### CRM Server (DigitalOcean)
+
+```bash
+# Using customer-install scripts
+cd customer-install
+./install.sh  # or install.ps1 on Windows
+```
+
+### Supabase Schema & Functions
+
+```bash
+cd supabase
+
+# Deploy the crm schema
+./deploy-schema.sh
+
+# Set secrets and deploy functions
+export SAAS_ADMIN_KEY="your-key"
+export CRM_SERVER_URL="https://crm.example.com"
+./deploy-functions.sh
+```
+
+### Configure CRM Webhooks
+
+In CRM PostgreSQL:
+```sql
+UPDATE core.webhook_config
+SET value = 'https://your-project.supabase.co/functions/v1/crm-webhook'
+WHERE name = 'supabase_webhook_url';
+```
 
 ---
 
@@ -78,6 +326,27 @@ chmod +x scripts/deploy-to-digitalocean.sh
 # With a specific version tag:
 ./scripts/deploy-to-digitalocean.sh v1.0.0
 ```
+
+## CI/CD: Automatic Deployment on Push
+
+The repository includes a GitHub Actions workflow that automatically builds and pushes the Docker image when you commit to `main` or `master`.
+
+### Setup GitHub Secrets
+
+Go to your repository **Settings > Secrets and variables > Actions** and add:
+
+| Secret Name | Description | Example |
+|-------------|-------------|---------|
+| `DIGITALOCEAN_EMAIL` | Your DigitalOcean registered email | `jose@gentlebirth.com` |
+| `DIGITALOCEAN_ACCESS_TOKEN` | Your DigitalOcean API token | `dop_v1_xxx...` |
+| `DIGITALOCEAN_REGISTRY_NAME` | Your registry name (without full URL) | `sleepnest` |
+
+### Trigger Deployment
+
+- **Automatic:** Push to `main` or `master` branch
+- **Manual:** Go to Actions > "Deploy to DigitalOcean Container Registry" > Run workflow
+
+---
 
 ## Customer Usage
 

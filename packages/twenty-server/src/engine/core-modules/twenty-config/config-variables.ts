@@ -265,6 +265,36 @@ export class ConfigVariables {
   @ValidateIf((env) => env.AUTH_SUPABASE_ENABLED)
   SUPABASE_JWT_SECRET: string;
 
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: false,
+    description:
+      'Comma-separated list of admin email addresses. Users with these emails get admin privileges.',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  ADMIN_EMAILS: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: true,
+    description:
+      'Secret key for verifying webhook signatures from external systems (billing, etc.). Generate with: openssl rand -hex 32',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  WEBHOOK_SECRET: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SUPABASE_AUTH,
+    isSensitive: true,
+    description:
+      'Master API key for SaaS platform operators. Provides full access to all tenant management operations. Generate with: openssl rand -hex 32',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  SAAS_ADMIN_KEY: string;
+
   // ==================== END SUPABASE AUTH ====================
 
   @ConfigVariablesMetadata({

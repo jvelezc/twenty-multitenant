@@ -96,9 +96,23 @@ $SUPABASE_SERVICE_ROLE_KEY_PLAIN = [Runtime.InteropServices.Marshal]::PtrToStrin
 $SUPABASE_JWT_SECRET = Read-Host "Supabase JWT Secret" -AsSecureString
 $SUPABASE_JWT_SECRET_PLAIN = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($SUPABASE_JWT_SECRET))
 
-# Step 4: Application Configuration
+# Step 4: Admin User Configuration
 Write-Host ""
-Write-Host "Step 4: Application Configuration" -ForegroundColor Yellow
+Write-Host "Step 4: Admin User Configuration" -ForegroundColor Yellow
+Write-Host "-------------------------------------------"
+Write-Host "Admin users have full access to manage all tenants,"
+Write-Host "view cross-tenant data, and disable accounts."
+Write-Host ""
+
+$ADMIN_EMAILS = Read-Host "Admin email addresses (comma-separated)"
+
+if ([string]::IsNullOrEmpty($ADMIN_EMAILS)) {
+    Write-Host "Warning: No admin emails specified. You can add them later in .env" -ForegroundColor Yellow
+}
+
+# Step 5: Application Configuration
+Write-Host ""
+Write-Host "Step 5: Application Configuration" -ForegroundColor Yellow
 Write-Host "-------------------------------------------"
 
 $APP_NAME = Read-Host "App Name [SleepNest CRM]"
@@ -108,9 +122,9 @@ Write-Host "Generating application secret..."
 $APP_SECRET = Generate-SecurePassword
 Write-Host "Application secret generated" -ForegroundColor Green
 
-# Step 5: Create deployment files
+# Step 6: Create deployment files
 Write-Host ""
-Write-Host "Step 5: Creating deployment files..." -ForegroundColor Yellow
+Write-Host "Step 6: Creating deployment files..." -ForegroundColor Yellow
 Write-Host "-------------------------------------------"
 
 $DEPLOY_DIR = "sleepnest-crm-deploy"
@@ -179,6 +193,7 @@ services:
       SUPABASE_ANON_KEY: `${SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: `${SUPABASE_SERVICE_ROLE_KEY}
       SUPABASE_JWT_SECRET: `${SUPABASE_JWT_SECRET}
+      ADMIN_EMAILS: `${ADMIN_EMAILS}
       AUTH_PASSWORD_ENABLED: "false"
       AUTH_GOOGLE_ENABLED: "false"
       AUTH_MICROSOFT_ENABLED: "false"
@@ -233,15 +248,18 @@ SUPABASE_URL=$SUPABASE_URL
 SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY_PLAIN
 SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY_PLAIN
 SUPABASE_JWT_SECRET=$SUPABASE_JWT_SECRET_PLAIN
+
+# Admin Users (comma-separated emails)
+ADMIN_EMAILS=$ADMIN_EMAILS
 "@
 
 $envContent | Out-File -FilePath ".env" -Encoding UTF8
 
 Write-Host "Deployment files created in ./$DEPLOY_DIR/" -ForegroundColor Green
 
-# Step 6: Create Droplet
+# Step 7: Create Droplet
 Write-Host ""
-Write-Host "Step 6: Creating DigitalOcean Droplet..." -ForegroundColor Yellow
+Write-Host "Step 7: Creating DigitalOcean Droplet..." -ForegroundColor Yellow
 Write-Host "-------------------------------------------"
 
 # Check if doctl is installed

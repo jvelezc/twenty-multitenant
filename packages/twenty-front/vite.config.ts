@@ -7,10 +7,10 @@ import fs from 'fs';
 import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
 import {
-  defineConfig,
-  loadEnv,
-  type PluginOption,
-  searchForWorkspaceRoot,
+    defineConfig,
+    loadEnv,
+    type PluginOption,
+    searchForWorkspaceRoot,
 } from 'vite';
 import checker from 'vite-plugin-checker';
 import svgr from 'vite-plugin-svgr';
@@ -151,7 +151,7 @@ export default defineConfig(({ command, mode }) => {
         enforce: 'pre',
       },
       visualizer({
-        open: true,
+        open: process.env.CI !== 'true', // Don't open in CI/Docker builds
         gzipSize: true,
         brotliSize: true,
         filename: 'dist/stats.html',

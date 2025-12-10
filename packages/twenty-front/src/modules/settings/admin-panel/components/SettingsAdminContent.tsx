@@ -20,6 +20,12 @@ export const SettingsAdminContent = () => {
       disabled: !canAccessFullAdminPanel && !canImpersonate,
     },
     {
+      id: SETTINGS_ADMIN_TABS.TENANTS,
+      title: t`Tenants`,
+      Icon: IconBuilding,
+      disabled: !canAccessFullAdminPanel,
+    },
+    {
       id: SETTINGS_ADMIN_TABS.CONFIG_VARIABLES,
       title: t`Config Variables`,
       Icon: IconVariable,

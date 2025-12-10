@@ -5,13 +5,29 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Repository } from 'typeorm';
 
 import {
-    AuthException,
-    AuthExceptionCode,
+  AuthException,
+  AuthExceptionCode,
 } from 'src/engine/core-modules/auth/auth.exception';
 import { type SupabaseAuthContext } from 'src/engine/core-modules/auth/strategies/supabase.auth.strategy';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { PrimaryAuthProvider } from 'src/engine/core-modules/user/enums/primary-auth-provider.enum';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
+
+/**
+ * Admin role identification from Supabase.
+ *
+ * Supabase users can be marked as admins in several ways:
+ * 1. app_metadata.role = 'admin' or 'super_admin'
+ * 2. app_metadata.is_admin = true
+ * 3. app_metadata.can_impersonate = true
+ * 4. User is in the ADMIN_EMAILS environment variable list
+ *
+ * app_metadata is set server-side and cannot be modified by users.
+ */
+type SupabaseAdminFlags = {
+  canImpersonate: boolean;
+  canAccessFullAdminPanel: boolean;
+};
 
 @Injectable()
 export class SupabaseAuthService {
@@ -57,6 +73,44 @@ export class SupabaseAuthService {
   }
 
   /**
+   * Extract admin flags from Supabase user metadata.
+   *
+   * Checks multiple sources for admin status:
+   * 1. app_metadata.role = 'admin' | 'super_admin' | 'platform_admin'
+   * 2. app_metadata.is_admin = true
+   * 3. app_metadata.can_impersonate = true
+   * 4. Email is in ADMIN_EMAILS config (comma-separated list)
+   */
+  private extractAdminFlags(
+    supabaseUser: { app_metadata?: Record<string, unknown>; email?: string },
+  ): SupabaseAdminFlags {
+    const appMetadata = supabaseUser.app_metadata || {};
+    const email = supabaseUser.email?.toLowerCase() || '';
+
+    // Check app_metadata for admin role
+    const role = appMetadata.role as string | undefined;
+    const isAdminRole = ['admin', 'super_admin', 'platform_admin'].includes(role || '');
+    const isAdminFlag = appMetadata.is_admin === true;
+    const canImpersonateFlag = appMetadata.can_impersonate === true;
+
+    // Check if email is in admin emails list
+    const adminEmailsConfig = this.twentyConfigService.get('ADMIN_EMAILS') as string | undefined;
+    const adminEmails = adminEmailsConfig
+      ? adminEmailsConfig.split(',').map((e) => e.trim().toLowerCase())
+      : [];
+    const isEmailAdmin = adminEmails.includes(email);
+
+    // Determine admin privileges
+    const isAdmin = isAdminRole || isAdminFlag || isEmailAdmin;
+    const canImpersonate = canImpersonateFlag || role === 'super_admin' || role === 'platform_admin' || isEmailAdmin;
+
+    return {
+      canImpersonate,
+      canAccessFullAdminPanel: isAdmin,
+    };
+  }
+
+  /**
    * Find a Twenty user by their Supabase user ID
    */
   async findUserBySupabaseId(supabaseUserId: string): Promise<UserEntity | null> {
@@ -77,13 +131,20 @@ export class SupabaseAuthService {
   }
 
   /**
-   * Create or update a Twenty user from Supabase auth context
+   * Create or update a Twenty user from Supabase auth context.
+   * Also syncs admin privileges from Supabase app_metadata.
    */
   async syncUserFromSupabase(
     supabaseAuthContext: SupabaseAuthContext,
+    supabaseUser?: { app_metadata?: Record<string, unknown>; email?: string },
   ): Promise<UserEntity> {
     const { supabaseUserId, email, firstName, lastName, picture, isEmailVerified } =
       supabaseAuthContext;
+
+    // Extract admin flags from Supabase metadata
+    const adminFlags = this.extractAdminFlags(
+      supabaseUser || { email },
+    );
 
     // First, try to find by Supabase ID
     let user = await this.findUserBySupabaseId(supabaseUserId);
@@ -112,6 +173,17 @@ export class SupabaseAuthService {
         needsUpdate = true;
       }
 
+      // Sync admin flags from Supabase (always update to reflect current state)
+      if (user.canImpersonate !== adminFlags.canImpersonate) {
+        user.canImpersonate = adminFlags.canImpersonate;
+        needsUpdate = true;
+      }
+
+      if (user.canAccessFullAdminPanel !== adminFlags.canAccessFullAdminPanel) {
+        user.canAccessFullAdminPanel = adminFlags.canAccessFullAdminPanel;
+        needsUpdate = true;
+      }
+
       if (needsUpdate) {
         user = await this.userRepository.save(user);
       }
@@ -131,10 +203,14 @@ export class SupabaseAuthService {
         user.isEmailVerified = true;
       }
 
+      // Sync admin flags
+      user.canImpersonate = adminFlags.canImpersonate;
+      user.canAccessFullAdminPanel = adminFlags.canAccessFullAdminPanel;
+
       return this.userRepository.save(user);
     }
 
-    // Create new user
+    // Create new user with admin flags
     const newUser = this.userRepository.create({
       email: email.toLowerCase(),
       firstName: firstName || '',
@@ -143,6 +219,8 @@ export class SupabaseAuthService {
       supabaseUserId,
       primaryAuthProvider: PrimaryAuthProvider.SUPABASE,
       isEmailVerified,
+      canImpersonate: adminFlags.canImpersonate,
+      canAccessFullAdminPanel: adminFlags.canAccessFullAdminPanel,
     });
 
     return this.userRepository.save(newUser);

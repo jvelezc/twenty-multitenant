@@ -60,13 +60,20 @@ export class SupabaseAuthController {
       );
     }
 
-    // Validate the Supabase token and get user info
+    // Validate the Supabase token and get user info (includes app_metadata for admin flags)
     const supabaseAuthContext =
       await this.supabaseAuthService.validateSupabaseToken(supabaseAccessToken);
 
-    // Sync user from Supabase to Twenty
-    const user =
-      await this.supabaseAuthService.syncUserFromSupabase(supabaseAuthContext);
+    // Get full Supabase user to access app_metadata for admin role detection
+    const supabaseUser = await this.supabaseAuthService.getSupabaseUserById(
+      supabaseAuthContext.supabaseUserId,
+    );
+
+    // Sync user from Supabase to Twenty (includes admin flag sync)
+    const user = await this.supabaseAuthService.syncUserFromSupabase(
+      supabaseAuthContext,
+      supabaseUser,
+    );
 
     // Check if user has access to the requested workspace
     let targetWorkspaceId = workspaceId;

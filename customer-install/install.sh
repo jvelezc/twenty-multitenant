@@ -105,7 +105,39 @@ prompt_secret "Supabase Service Role Key" SUPABASE_SERVICE_ROLE_KEY
 prompt_secret "Supabase JWT Secret" SUPABASE_JWT_SECRET
 
 echo ""
-echo -e "${YELLOW}Step 4: Application Configuration${NC}"
+echo -e "${YELLOW}Step 4: Admin User Configuration${NC}"
+echo "-------------------------------------------"
+echo "Admin users have full access to manage all tenants,"
+echo "view cross-tenant data, and disable accounts."
+echo ""
+prompt_with_default "Admin email addresses (comma-separated)" "" ADMIN_EMAILS
+
+if [ -z "$ADMIN_EMAILS" ]; then
+    echo -e "${RED}Warning: No admin emails specified. You can add them later in .env${NC}"
+fi
+
+echo ""
+echo -e "${YELLOW}Step 5: Webhook & SaaS Admin Configuration${NC}"
+echo "-------------------------------------------"
+echo "Webhooks allow external systems (billing, CRM, etc.) to notify"
+echo "this CRM when a tenant should be disabled/enabled."
+echo ""
+echo "Generating webhook secret..."
+WEBHOOK_SECRET=$(generate_secret)
+echo -e "${GREEN}Webhook secret generated${NC}"
+echo ""
+echo "Generating SaaS Admin API key..."
+SAAS_ADMIN_KEY=$(generate_secret)
+echo -e "${GREEN}SaaS Admin key generated${NC}"
+echo ""
+echo -e "${YELLOW}IMPORTANT: Save these keys securely!${NC}"
+echo "  - WEBHOOK_SECRET: Share with external systems for signed webhooks"
+echo "  - SAAS_ADMIN_KEY: Your master API key for full platform access"
+echo ""
+echo "Use SaaS Admin key with header: x-saas-admin-key"
+
+echo ""
+echo -e "${YELLOW}Step 6: Application Configuration${NC}"
 echo "-------------------------------------------"
 prompt_with_default "App Name" "SleepNest CRM" APP_NAME
 echo "Generating application secret..."
@@ -113,7 +145,7 @@ APP_SECRET=$(generate_secret)
 echo -e "${GREEN}Application secret generated${NC}"
 
 echo ""
-echo -e "${YELLOW}Step 5: Creating deployment files...${NC}"
+echo -e "${YELLOW}Step 7: Creating deployment files...${NC}"
 echo "-------------------------------------------"
 
 # Create deployment directory
@@ -193,6 +225,15 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
 
+      # Admin Users - these emails get full admin access
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+
+      # Webhook Secret - for signed requests from external systems
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+
+      # SaaS Admin Key - master API key for platform operators
+      SAAS_ADMIN_KEY: ${SAAS_ADMIN_KEY}
+
       # Disable other auth providers (optional - remove to enable)
       AUTH_PASSWORD_ENABLED: "false"
       AUTH_GOOGLE_ENABLED: "false"
@@ -246,6 +287,15 @@ SUPABASE_URL=${SUPABASE_URL}
 SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
 SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+
+# Admin Users (comma-separated emails)
+ADMIN_EMAILS=${ADMIN_EMAILS}
+
+# Webhook Secret (share with external systems for signed requests)
+WEBHOOK_SECRET=${WEBHOOK_SECRET}
+
+# SaaS Admin Key (your master API key for full platform access)
+SAAS_ADMIN_KEY=${SAAS_ADMIN_KEY}
 ENV_EOF
 
 # Create cloud-init script for DigitalOcean
@@ -269,7 +319,7 @@ CLOUD_EOF
 echo -e "${GREEN}Deployment files created in ./$DEPLOY_DIR/${NC}"
 
 echo ""
-echo -e "${YELLOW}Step 6: Creating DigitalOcean Droplet...${NC}"
+echo -e "${YELLOW}Step 7: Creating DigitalOcean Droplet...${NC}"
 echo "-------------------------------------------"
 
 # Install doctl if not present
@@ -315,7 +365,7 @@ if [ -z "$DOMAIN" ]; then
 fi
 
 echo ""
-echo -e "${YELLOW}Step 7: Deploying application...${NC}"
+echo -e "${YELLOW}Step 8: Deploying application...${NC}"
 echo "-------------------------------------------"
 
 # Wait for Droplet to be ready

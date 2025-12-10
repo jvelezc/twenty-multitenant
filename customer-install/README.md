@@ -1,17 +1,55 @@
 # SleepNest CRM - Customer Installation Guide
 
-Deploy your own instance of SleepNest CRM to DigitalOcean with Supabase authentication.
+Deploy your own instance of SleepNest CRM with Supabase authentication.
 
-> **💡 These scripts are templates!** Feel free to modify them for your specific needs - change defaults, hardcode values for CI/CD, or adapt for other cloud providers.
+## 🚀 Quick Install (Recommended)
+
+If you already have Docker installed, run this single command:
+
+```bash
+# One-line install
+curl -fsSL https://raw.githubusercontent.com/your-org/twenty-multitenant/main/customer-install/quick-install.sh | bash
+```
+
+Or with pre-configured Supabase settings:
+
+```bash
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_ANON_KEY="your-anon-key"
+export SUPABASE_SERVICE_ROLE_KEY="your-service-key"
+export SUPABASE_JWT_SECRET="your-jwt-secret"
+curl -fsSL https://raw.githubusercontent.com/your-org/twenty-multitenant/main/customer-install/quick-install.sh | bash
+```
+
+**That's it!** Your CRM will be running at `http://localhost:3000`
+
+---
+
+## 🔄 Automatic Updates
+
+The Docker image is automatically updated whenever we push to the main branch. To get the latest version:
+
+```bash
+cd ~/sleepnest-crm
+./update.sh
+```
+
+Or manually:
+
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
+---
 
 ## Prerequisites
 
 Before you begin, you'll need:
 
-1. **DigitalOcean Account**
-   - Create an account at [digitalocean.com](https://digitalocean.com)
-   - Generate an API token at [API Tokens](https://cloud.digitalocean.com/account/api/tokens)
-   - Token needs read/write access
+1. **Docker & Docker Compose**
+   - Install Docker: [get.docker.com](https://get.docker.com)
+   - Docker Compose is included with Docker Desktop
 
 2. **Supabase Project**
    - Create a free project at [supabase.com](https://supabase.com)
@@ -25,29 +63,139 @@ Before you begin, you'll need:
    - A domain name if you want HTTPS access
    - You'll need to configure DNS after deployment
 
-## Quick Start
+---
 
-### Linux/Mac
+## Installation Options
+
+### Option 1: Quick Install (Local Docker)
+
+Best for: Development, testing, small deployments
 
 ```bash
-curl -O https://raw.githubusercontent.com/your-repo/sleepnest-crm/main/customer-install/install.sh
+curl -fsSL https://raw.githubusercontent.com/your-org/twenty-multitenant/main/customer-install/quick-install.sh | bash
+```
+
+### Option 2: Full Install (DigitalOcean Droplet)
+
+Best for: Production deployments
+
+```bash
+curl -O https://raw.githubusercontent.com/your-org/twenty-multitenant/main/customer-install/install.sh
 chmod +x install.sh
 ./install.sh
 ```
 
-### Windows (PowerShell)
+### Option 3: Windows (PowerShell)
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/your-repo/sleepnest-crm/main/customer-install/install.ps1" -OutFile "install.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/your-org/twenty-multitenant/main/customer-install/install.ps1" -OutFile "install.ps1"
 .\install.ps1
 ```
 
 ## What the Script Does
 
 1. **Prompts for configuration** - API keys, database settings, Supabase credentials
-2. **Creates a DigitalOcean Droplet** - Ubuntu with Docker pre-installed
-3. **Generates deployment files** - `docker-compose.yml` and `.env`
-4. **Deploys the application** - Pulls the Docker image and starts services
+2. **Prompts for admin emails** - Users who will have full admin access
+3. **Creates a DigitalOcean Droplet** - Ubuntu with Docker pre-installed
+4. **Generates deployment files** - `docker-compose.yml` and `.env`
+5. **Deploys the application** - Pulls the Docker image and starts services
+
+## Admin Users
+
+Admin users have special privileges:
+- **Manage all tenants** - View, enable/disable any tenant
+- **Cross-tenant data access** - View contacts, companies across all tenants
+- **Add admin notes** - Internal notes about tenants
+
+### Setting Admin Users
+
+During installation, you'll be prompted for admin email addresses:
+
+```
+Admin email addresses (comma-separated): admin@yourcompany.com,ceo@yourcompany.com
+```
+
+You can also set this in your `.env` file:
+
+```env
+ADMIN_EMAILS=admin@yourcompany.com,ceo@yourcompany.com
+```
+
+### Alternative: Supabase app_metadata
+
+For more granular control, set admin roles directly in Supabase:
+
+```sql
+-- In Supabase SQL Editor
+UPDATE auth.users
+SET raw_app_meta_data = raw_app_meta_data || '{"role": "admin"}'::jsonb
+WHERE email = 'admin@yourcompany.com';
+```
+
+## Webhooks (External System Integration)
+
+The CRM supports webhooks for external systems (billing, CRM, etc.) to notify when tenants should be disabled/enabled.
+
+### Webhook Endpoint
+
+```
+POST /webhooks/tenant
+```
+
+### Signature Verification (Like Stripe)
+
+All webhook requests must be signed using HMAC-SHA256:
+
+```
+x-webhook-signature: t=1234567890,v1=abc123...
+```
+
+The signature is computed as:
+
+```
+HMAC-SHA256(timestamp + "." + payload, WEBHOOK_SECRET)
+```
+
+### Supported Events
+
+| Event | Description |
+|-------|-------------|
+| `tenant.disabled` | Disable a tenant |
+| `tenant.enabled` | Enable a tenant |
+| `tenant.subscription.cancelled` | Subscription cancelled (disables tenant) |
+| `tenant.subscription.updated` | Subscription updated (enables tenant) |
+
+### Example: Disable a Tenant
+
+```bash
+# Set your webhook secret
+SECRET="your-webhook-secret"
+
+# Create payload
+PAYLOAD='{"event":"tenant.disabled","timestamp":"2024-01-01T00:00:00Z","data":{"tenantId":"workspace-uuid","reason":"Subscription cancelled"}}'
+
+# Generate signature
+TIMESTAMP=$(date +%s)
+SIGNATURE=$(echo -n "${TIMESTAMP}.${PAYLOAD}" | openssl dgst -sha256 -hmac "${SECRET}" | cut -d' ' -f2)
+
+# Send webhook
+curl -X POST https://your-crm.com/webhooks/tenant \
+  -H "Content-Type: application/json" \
+  -H "x-webhook-signature: t=${TIMESTAMP},v1=${SIGNATURE}" \
+  -d "${PAYLOAD}"
+```
+
+### Test Endpoint
+
+To verify your webhook configuration:
+
+```bash
+curl -X POST https://your-crm.com/webhooks/tenant/test \
+  -H "Content-Type: application/json" \
+  -d '{"test": true}'
+```
+
+This returns a sample signature you can use for testing.
 
 ## Manual Installation
 
@@ -248,9 +396,63 @@ docker-compose up -d
 To update to the latest version:
 
 ```bash
+cd ~/sleepnest-crm
+./update.sh
+```
+
+Or manually:
+
+```bash
 docker-compose pull
 docker-compose up -d
 ```
+
+The Docker image is automatically rebuilt and pushed whenever we commit to the main branch, so `latest` always has the newest features and fixes.
+
+---
+
+## SaaS Admin API
+
+For programmatic tenant management, use the SaaS Admin API with your `SAAS_ADMIN_KEY`:
+
+```bash
+# List all tenants
+curl -X GET https://your-crm.com/saas/tenants \
+  -H "x-saas-admin-key: your-saas-admin-key"
+
+# Create a tenant
+curl -X POST https://your-crm.com/saas/tenants \
+  -H "x-saas-admin-key: your-saas-admin-key" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "displayName": "Acme Corp"}'
+
+# Disable a tenant
+curl -X POST https://your-crm.com/saas/tenants/{id}/disable \
+  -H "x-saas-admin-key: your-saas-admin-key" \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Subscription cancelled"}'
+
+# Enable a tenant
+curl -X POST https://your-crm.com/saas/tenants/{id}/enable \
+  -H "x-saas-admin-key: your-saas-admin-key"
+
+# Get platform stats
+curl -X GET https://your-crm.com/saas/stats \
+  -H "x-saas-admin-key: your-saas-admin-key"
+```
+
+### Supabase Edge Function Proxy
+
+If using Supabase, you can call the CRM through Edge Functions without exposing the API key:
+
+```typescript
+// In your Supabase client
+const { data } = await supabase.functions.invoke('crm-proxy', {
+  body: { path: '/tenants', method: 'GET' }
+});
+```
+
+---
 
 ## Support
 
