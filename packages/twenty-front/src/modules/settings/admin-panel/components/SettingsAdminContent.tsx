@@ -22,7 +22,7 @@ export const SettingsAdminContent = () => {
     {
       id: SETTINGS_ADMIN_TABS.TENANTS,
       title: t`Tenants`,
-      Icon: IconBuilding,
+      Icon: IconBuildingSkyscraper,
       disabled: !canAccessFullAdminPanel,
     },
     {

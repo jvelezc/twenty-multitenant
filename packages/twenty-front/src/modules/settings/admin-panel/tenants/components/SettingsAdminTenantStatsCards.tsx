@@ -2,7 +2,6 @@ import type { TenantStats } from '@/settings/admin-panel/tenants/types/Tenant';
 import styled from '@emotion/styled';
 import { t } from '@lingui/core/macro';
 import {
-    IconBuilding,
     IconBuildingSkyscraper,
     IconUserOff,
     IconUsers,
@@ -74,7 +73,7 @@ export const SettingsAdminTenantStatsCards = ({
       color: 'blue',
     },
     {
-      Icon: IconBuilding,
+      Icon: IconBuildingSkyscraper,
       value: stats?.activeTenants ?? 0,
       label: t`Active Tenants`,
       color: 'green',

@@ -9,15 +9,13 @@ import {
     IconAddressBook,
     IconArrowLeft,
     IconBriefcase,
-    IconBuilding,
     IconCalendar,
     IconCurrencyDollar,
     IconId,
     IconMail,
-    IconNote,
     IconPlayerPause,
     IconPlayerPlay,
-    IconUsers,
+    IconUsers
 } from 'twenty-ui/display';
 import { Button, TextArea } from 'twenty-ui/input';
 import { Card, Section } from 'twenty-ui/layout';
@@ -130,7 +128,7 @@ export const SettingsAdminTenantDetail = ({
       value: tenant.id,
     },
     {
-      Icon: IconBuilding,
+      Icon: IconBuildingSkyscraper,
       label: t`Subdomain`,
       value: tenant.subdomain,
     },
@@ -182,7 +180,7 @@ export const SettingsAdminTenantDetail = ({
           {t`Back to Tenants`}
         </StyledBackButton>
         <StyledTenantTitle>
-          <IconBuilding size={24} />
+          <IconBuildingSkyscraper size={24} />
           {tenant.displayName}
         </StyledTenantTitle>
         <StyledStatusBadge status={tenant.isDisabled ? 'disabled' : 'active'}>
@@ -256,7 +254,7 @@ export const SettingsAdminTenantDetail = ({
           />
           <StyledActionsRow>
             <Button
-              Icon={IconNote}
+              Icon={IconNotes}
               title={t`Save Notes`}
               variant="secondary"
               onClick={handleSaveNotes}

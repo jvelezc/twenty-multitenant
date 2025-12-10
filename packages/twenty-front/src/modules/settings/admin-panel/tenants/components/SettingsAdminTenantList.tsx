@@ -3,12 +3,11 @@ import styled from '@emotion/styled';
 import { t } from '@lingui/core/macro';
 import { formatDistanceToNow } from 'date-fns';
 import {
-    IconBuilding,
     IconCalendar,
     IconChevronRight,
     IconPlayerPause,
     IconPlayerPlay,
-    IconUsers,
+    IconUsers
 } from 'twenty-ui/display';
 import { Card } from 'twenty-ui/layout';
 
@@ -112,7 +111,7 @@ export const SettingsAdminTenantList = ({
   if (tenants.length === 0) {
     return (
       <StyledEmptyState>
-        <IconBuilding size={48} />
+        <IconBuildingSkyscraper size={48} />
         <p>{t`No tenants found`}</p>
       </StyledEmptyState>
     );
@@ -129,7 +128,7 @@ export const SettingsAdminTenantList = ({
         >
           <StyledTenantHeader>
             <StyledTenantName>
-              <IconBuilding size={20} />
+              <IconBuildingSkyscraper size={20} />
               {tenant.displayName}
               <span style={{ opacity: 0.5, fontWeight: 'normal' }}>
                 ({tenant.subdomain})
