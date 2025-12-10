@@ -56,10 +56,6 @@ supabase secrets set CRM_SERVER_URL="$CRM_SERVER_URL"
 
 # Deploy functions
 echo ""
-echo -e "${YELLOW}Deploying crm-proxy function...${NC}"
-supabase functions deploy crm-proxy
-
-echo ""
 echo -e "${YELLOW}Deploying tenant-create function...${NC}"
 supabase functions deploy tenant-create --no-verify-jwt
 

@@ -26,15 +26,161 @@
 
 This is a multi-tenant fork of Twenty CRM designed to operate as an **add-on module** within a larger SaaS platform. The CRM runs on DigitalOcean and integrates with Supabase as the control unit.
 
-## Quick Links
+---
 
-- 📋 [Multi-tenancy Plan](./MULTITENANCY_PLAN.md) - Full implementation details
-- 📦 [Supabase Integration](./supabase/README.md) - Edge functions and schema
-- 🚀 [Customer Install](./customer-install/README.md) - Docker deployment guide
+# 🚀 Customer Deployment
+
+## What You Get
+
+Running the install script ([`customer-install/quick-install.sh`](./customer-install/quick-install.sh)) deploys a **complete CRM system** to your infrastructure:
+
+| Component | What It Is | Where It Runs |
+|-----------|-----------|---------------|
+| **CRM Server** | NestJS application serving REST & GraphQL APIs | Docker container |
+| **PostgreSQL** | Database storing all CRM data (contacts, companies, deals) | Docker container |
+| **Redis** | Cache and job queue for background tasks | Docker container |
+| **Worker** | Background processor for emails, sync, notifications | Docker container |
+
+## What Changes on Your System
+
+The install script will:
+
+1. **Create a directory** `~/sleepnest-crm/` containing:
+   - `docker-compose.yml` - Container orchestration
+   - `.env` - Your configuration (secrets, Supabase keys)
+   - `update.sh` - Script to pull latest updates
+
+2. **Create Docker volumes** for persistent data:
+   - `db-data` - PostgreSQL database files
+   - `server-local-data` - File uploads and attachments
+
+3. **Start 4 Docker containers** listening on port `3000`
+
+**Nothing else is modified.** No system packages installed, no global configs changed.
+
+## Quick Install
+
+**Prerequisites:** Docker and Docker Compose installed.
+
+```bash
+# One command install
+curl -fsSL https://raw.githubusercontent.com/your-org/twenty-multitenant/main/customer-install/quick-install.sh | bash
+```
+
+After install, edit `~/sleepnest-crm/.env` with your Supabase credentials, then restart:
+
+```bash
+cd ~/sleepnest-crm
+docker-compose down && docker-compose up -d
+```
+
+## Update to Latest Version
+
+We push updates automatically. To get them:
+
+```bash
+cd ~/sleepnest-crm
+./update.sh
+```
+
+## Uninstall
+
+To completely remove:
+
+```bash
+cd ~/sleepnest-crm
+docker-compose down -v  # Stop containers and delete data
+cd ~
+rm -rf sleepnest-crm    # Remove config files
+```
 
 ---
 
-# Architecture Overview
+## Programmatic Setup (For Installers)
+
+If you're building an installer (C#, Python, etc.), use the **Setup API** instead of manual configuration:
+
+### 1. Deploy with Setup Key
+
+```bash
+# Deploy container with a one-time setup key
+docker run -d \
+  -e SETUP_KEY="your-random-setup-key" \
+  -p 3000:3000 \
+  registry.digitalocean.com/sleepnest/sleepnest-crm:latest
+```
+
+### 2. Check Setup Status
+
+```http
+GET http://localhost:3000/setup/status
+```
+
+Response:
+```json
+{
+  "configured": false,
+  "setupAvailable": true,
+  "supabaseConfigured": false,
+  "message": "Setup available - POST to /setup/initialize"
+}
+```
+
+### 3. Initialize Configuration
+
+```http
+POST http://localhost:3000/setup/initialize
+Content-Type: application/json
+
+{
+  "setupKey": "your-random-setup-key",
+  "supabaseUrl": "https://xxx.supabase.co",
+  "supabaseAnonKey": "eyJ...",
+  "supabaseServiceRoleKey": "eyJ...",
+  "supabaseJwtSecret": "your-jwt-secret",
+  "adminEmails": ["admin@example.com"],
+  "serverUrl": "https://crm.example.com"
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "CRM configured successfully",
+  "generatedSecrets": {
+    "saasAdminKey": "abc123...",
+    "webhookSecret": "xyz789..."
+  },
+  "nextSteps": [
+    "Save the generated secrets securely",
+    "Restart the CRM server"
+  ]
+}
+```
+
+### 4. Restart to Apply
+
+```bash
+docker-compose restart server worker
+```
+
+**Security Notes:**
+- `SETUP_KEY` is a one-time key - setup can only be called once
+- After setup, the endpoint returns 403 Forbidden
+- Generated `saasAdminKey` and `webhookSecret` are returned only once - save them!
+
+---
+
+## Full Documentation
+
+- 📋 [Multi-tenancy Plan](./MULTITENANCY_PLAN.md) - Implementation details
+- 📦 [Supabase Integration](./supabase/README.md) - Edge functions and schema
+- 🚀 [Detailed Install Guide](./customer-install/README.md) - All options and troubleshooting
+
+---
+
+# Architecture Overview (For Developers)
 
 ## System Design
 
@@ -199,11 +345,10 @@ Protected by JWT + Admin role. Used by the CRM admin UI.
 
 | Function | Auth | Description |
 |----------|------|-------------|
-| `crm-proxy` | Supabase JWT (admin) | Transparent proxy to CRM `/saas/*` API |
-| `crm-webhook` | Webhook signature | Receives confirmations from CRM |
-| `tenant-create` | `x-saas-admin-key` | Create tenant (legacy) |
-| `tenant-manage` | `x-saas-admin-key` | Manage tenants (legacy) |
-| `tenant-stats` | `x-saas-admin-key` | Get statistics (legacy) |
+| `tenant-create` | `x-saas-admin-key` | Create tenant in CRM and sync to `crm` schema |
+| `tenant-manage` | `x-saas-admin-key` | Enable/disable/delete tenants |
+| `tenant-stats` | `x-saas-admin-key` | Get platform statistics |
+| `crm-webhook` | Webhook signature | Receives confirmations from CRM via `pg_net` |
 
 ---
 

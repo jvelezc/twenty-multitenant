@@ -55,9 +55,34 @@ generate_secret() {
     openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p
 }
 
+# Check if Supabase config is provided via environment
+SUPABASE_CONFIGURED=false
+if [ -n "$SUPABASE_URL" ] && [ "$SUPABASE_URL" != "https://your-project.supabase.co" ]; then
+    SUPABASE_CONFIGURED=true
+fi
+
 # Create .env if it doesn't exist
 if [ ! -f .env ]; then
     echo "🔐 Generating configuration..."
+
+    # If Supabase not configured, prompt for it
+    if [ "$SUPABASE_CONFIGURED" = false ]; then
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📋 Supabase Configuration Required"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "Get these from: https://app.supabase.com/project/_/settings/api"
+        echo ""
+
+        read -p "Supabase Project URL (e.g., https://xxx.supabase.co): " SUPABASE_URL
+        read -p "Supabase Anon Key: " SUPABASE_ANON_KEY
+        read -p "Supabase Service Role Key: " SUPABASE_SERVICE_ROLE_KEY
+        read -p "Supabase JWT Secret: " SUPABASE_JWT_SECRET
+        echo ""
+        read -p "Admin email addresses (comma-separated, or leave empty): " ADMIN_EMAILS
+        echo ""
+    fi
 
     cat > .env << EOF
 # ============================================
@@ -65,39 +90,46 @@ if [ ! -f .env ]; then
 # Generated on $(date)
 # ============================================
 
-# Docker Image (auto-updated)
-DOCKER_IMAGE=registry.digitalocean.com/sleepnest/sleepnest-crm:latest
-
-# Database (auto-generated)
-PG_DATABASE=sleepnest_crm
-PG_USER=sleepnest
-PG_PASSWORD=$(generate_secret)
+# Database (auto-generated - do not change)
+PG_DATABASE_NAME=default
+PG_DATABASE_USER=postgres
+PG_DATABASE_PASSWORD=$(generate_secret)
 
 # Server
 SERVER_URL=${SERVER_URL:-http://localhost:3000}
 APP_SECRET=$(generate_secret)
 
-# Supabase (REQUIRED - update these!)
-SUPABASE_URL=${SUPABASE_URL:-https://your-project.supabase.co}
-SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-your-anon-key}
-SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}
-SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-your-jwt-secret}
+# Supabase Authentication
+SUPABASE_URL=${SUPABASE_URL}
+SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
 
-# Admin Users (comma-separated emails)
+# Admin Users (comma-separated emails with full platform access)
 ADMIN_EMAILS=${ADMIN_EMAILS:-}
 
-# SaaS Integration (auto-generated)
+# SaaS Integration (auto-generated - save these securely!)
 WEBHOOK_SECRET=$(generate_secret)
 SAAS_ADMIN_KEY=$(generate_secret)
 EOF
 
-    echo "✅ Configuration generated"
-    echo ""
-    echo "⚠️  IMPORTANT: Edit .env and update Supabase settings!"
-    echo "   nano $INSTALL_DIR/.env"
+    echo "✅ Configuration saved to .env"
     echo ""
 else
-    echo "✅ Using existing configuration"
+    echo "✅ Using existing configuration from .env"
+fi
+
+# Validate required config
+source .env
+if [ -z "$SUPABASE_URL" ] || [ "$SUPABASE_URL" = "https://your-project.supabase.co" ]; then
+    echo ""
+    echo "❌ Error: Supabase is not configured!"
+    echo ""
+    echo "Edit the .env file and add your Supabase credentials:"
+    echo "   nano $INSTALL_DIR/.env"
+    echo ""
+    echo "Then run: docker-compose up -d"
+    exit 1
 fi
 
 # Pull and start
