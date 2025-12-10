@@ -1,5 +1,6 @@
 import { SettingsAdminTableCard } from '@/settings/admin-panel/components/SettingsAdminTableCard';
 import type { TenantDetails } from '@/settings/admin-panel/tenants/types/Tenant';
+import { TextArea } from '@/ui/input/components/TextArea';
 import styled from '@emotion/styled';
 import { t } from '@lingui/core/macro';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -9,15 +10,17 @@ import {
     IconAddressBook,
     IconArrowLeft,
     IconBriefcase,
+    IconBuildingSkyscraper,
     IconCalendar,
     IconCurrencyDollar,
     IconId,
     IconMail,
+    IconNotes,
     IconPlayerPause,
     IconPlayerPlay,
-    IconUsers
+    IconUsers,
 } from 'twenty-ui/display';
-import { Button, TextArea } from 'twenty-ui/input';
+import { Button } from 'twenty-ui/input';
 import { Card, Section } from 'twenty-ui/layout';
 
 const StyledHeader = styled.div`
@@ -247,6 +250,7 @@ export const SettingsAdminTenantDetail = ({
         <H2Title title={t`Admin Notes`} description={t`Internal notes about this tenant`} />
         <StyledNotesContainer>
           <TextArea
+            textAreaId="tenant-admin-notes"
             value={notes}
             onChange={(value) => setNotes(value)}
             placeholder={t`Add notes about this tenant...`}
@@ -291,6 +295,7 @@ export const SettingsAdminTenantDetail = ({
         ) : (
           <div>
             <TextArea
+              textAreaId="tenant-disable-reason"
               value={disableReason}
               onChange={(value) => setDisableReason(value)}
               placeholder={t`Reason for disabling (optional)...`}
